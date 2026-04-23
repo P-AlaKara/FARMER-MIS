@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manage Farmers — FarmApp</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+        <rect width="32" height="32" rx="8" fill="rgba(255,255,255,0.2)"/>
+        <path d="M8 24c0-6 4-10 8-12 4 2 8 6 8 12" stroke="#d8f3dc" stroke-width="2" fill="none"/>
+        <line x1="16" y1="12" x2="16" y2="24" stroke="#d8f3dc" stroke-width="2"/>
+      </svg>
+      <span>FarmApp</span>
+    </div>
+    <nav>
+      <a href="dashboard-admin.html">📊 Dashboard</a>
+      <a href="farmers.html" class="active">👨‍🌾 Farmers</a>
+    </nav>
+    <div class="user-info">
+      <div class="name" id="sidebar-name">—</div>
+      <div class="role">Admin</div>
+      <button onclick="logout()">Sign out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-header">
+      <h1>Farmer Management</h1>
+      <p>Add, edit, and remove farmers from the system.</p>
+    </div>
+
+    <div class="alert alert-success" id="success-msg"></div>
+    <div class="alert alert-error"   id="error-msg"></div>
+
+    <div class="card">
+      <div class="top-bar">
+        <h3 style="border:none;padding:0;margin:0">All Farmers</h3>
+        <button class="btn btn-green btn-sm" onclick="openModal()">+ Add Farmer</button>
+      </div>
+      <div class="table-wrap" style="margin-top:16px">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th><th>Email</th><th>Location</th>
+              <th>Crop</th><th>Farm size</th><th>Phone</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="farmers-tbody">
+            <tr><td colspan="7" class="empty">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Add / Edit Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h3 id="modal-title">Add Farmer</h3>
+    <div class="alert alert-error" id="modal-error"></div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>First name</label>
+        <input type="text" id="f-first" placeholder="John">
+      </div>
+      <div class="form-group">
+        <label>Last name</label>
+        <input type="text" id="f-last" placeholder="Doe">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="f-email" placeholder="farmer@example.com">
+    </div>
+    <div class="form-group" id="pw-group">
+      <label>Password</label>
+      <input type="password" id="f-password" placeholder="Min. 8 characters">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Location</label>
+        <input type="text" id="f-location" placeholder="Rift Valley">
+      </div>
+      <div class="form-group">
+        <label>City (for weather)</label>
+        <input type="text" id="f-city" placeholder="Nakuru">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Crop</label>
+        <input type="text" id="f-crop" placeholder="maize">
+      </div>
+      <div class="form-group">
+        <label>Farm size (acres)</label>
+        <input type="number" id="f-size" placeholder="5.0" step="0.1">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Phone</label>
+      <input type="text" id="f-phone" placeholder="0712345678">
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-green" id="save-btn" onclick="saveFarmer()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/auth.js"></script>
+<script>
+  requireAuth('admin');
+  const user = getUser();
+  document.getElementById('sidebar-name').textContent = user?.full_name || user?.email || '—';
+
+  let editingId = null;
+
+  function showMsg(type, text) {
+    const el = document.getElementById(type === 'ok' ? 'success-msg' : 'error-msg');
+    el.textContent = text;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 3000);
+  }
+
+  async function loadFarmers() {
+    const res = await authFetch('http://127.0.0.1:8000/api/farmers/');
+    const data = await res.json();
+    const tbody = document.getElementById('farmers-tbody');
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="empty">No farmers yet. Add one!</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.map(f => `
+      <tr>
+        <td>${f.full_name}</td>
+        <td>${f.email}</td>
+        <td>${f.farmer_profile?.location || '—'}</td>
+        <td>${f.farmer_profile?.crop ? '<span class="badge">' + f.farmer_profile.crop + '</span>' : '—'}</td>
+        <td>${f.farmer_profile?.farm_size_acres ? f.farmer_profile.farm_size_acres + ' ac' : '—'}</td>
+        <td>${f.farmer_profile?.phone || '—'}</td>
+        <td>
+          <div class="actions">
+            <button class="btn btn-sm btn-edit" onclick="openEdit(${f.id})">Edit</button>
+            <button class="btn btn-sm btn-delete" onclick="deleteFarmer(${f.id}, '${f.full_name}')">Delete</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function openModal(id) {
+    editingId = null;
+    document.getElementById('modal-title').textContent = 'Add Farmer';
+    document.getElementById('modal-error').classList.remove('show');
+    document.getElementById('pw-group').style.display = '';
+    ['f-first','f-last','f-email','f-password','f-location','f-city','f-crop','f-size','f-phone']
+      .forEach(id => document.getElementById(id).value = '');
+    document.getElementById('modal').classList.add('open');
+  }
+
+  async function openEdit(id) {
+    editingId = id;
+    document.getElementById('modal-title').textContent = 'Edit Farmer';
+    document.getElementById('modal-error').classList.remove('show');
+    document.getElementById('pw-group').style.display = 'none'; // password optional on edit
+    document.getElementById('modal').classList.add('open');
+
+    const res = await authFetch(`http://127.0.0.1:8000/api/farmers/${id}/`);
+    const f = await res.json();
+    document.getElementById('f-first').value    = f.first_name || '';
+    document.getElementById('f-last').value     = f.last_name  || '';
+    document.getElementById('f-email').value    = f.email      || '';
+    document.getElementById('f-location').value = f.farmer_profile?.location || '';
+    document.getElementById('f-city').value     = f.farmer_profile?.city     || '';
+    document.getElementById('f-crop').value     = f.farmer_profile?.crop     || '';
+    document.getElementById('f-size').value     = f.farmer_profile?.farm_size_acres || '';
+    document.getElementById('f-phone').value    = f.farmer_profile?.phone    || '';
+  }
+
+  function closeModal() {
+    document.getElementById('modal').classList.remove('open');
+  }
+
+  async function saveFarmer() {
+    const payload = {
+      first_name: document.getElementById('f-first').value.trim(),
+      last_name:  document.getElementById('f-last').value.trim(),
+      email:      document.getElementById('f-email').value.trim(),
+      farmer_profile: {
+        location:        document.getElementById('f-location').value.trim(),
+        city:            document.getElementById('f-city').value.trim(),
+        crop:            document.getElementById('f-crop').value.trim(),
+        farm_size_acres: document.getElementById('f-size').value || null,
+        phone:           document.getElementById('f-phone').value.trim(),
+      }
+    };
+    if (!editingId) {
+      payload.password = document.getElementById('f-password').value;
+    }
+
+    const errEl = document.getElementById('modal-error');
+    const btn = document.getElementById('save-btn');
+
+    if (!payload.first_name || !payload.last_name || !payload.email) {
+      errEl.textContent = 'First name, last name and email are required.';
+      errEl.classList.add('show');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+
+    const url = editingId
+      ? `http://127.0.0.1:8000/api/farmers/${editingId}/`
+      : 'http://127.0.0.1:8000/api/farmers/';
+    const method = editingId ? 'PATCH' : 'POST';
+
+    const res = await authFetch(url, { method, body: JSON.stringify(payload) });
+    const data = await res.json();
+
+    btn.disabled = false;
+    btn.textContent = 'Save';
+
+    if (res.ok) {
+      closeModal();
+      showMsg('ok', editingId ? 'Farmer updated successfully.' : 'Farmer added successfully.');
+      loadFarmers();
+    } else {
+      const msgs = Object.entries(data).map(([k,v]) => `${k}: ${[v].flat().join(', ')}`).join(' | ');
+      errEl.textContent = msgs || 'Something went wrong.';
+      errEl.classList.add('show');
+    }
+  }
+
+  async function deleteFarmer(id, name) {
+    if (!confirm(`Delete farmer "${name}"? This cannot be undone.`)) return;
+    const res = await authFetch(`http://127.0.0.1:8000/api/farmers/${id}/`, { method: 'DELETE' });
+    if (res.ok) {
+      showMsg('ok', `${name} has been removed.`);
+      loadFarmers();
+    } else {
+      showMsg('err', 'Failed to delete farmer.');
+    }
+  }
+
+  // Close modal on overlay click
+  document.getElementById('modal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+
+  loadFarmers();
+</script>
+</body>
+</html>

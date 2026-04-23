@@ -5,6 +5,7 @@ from .models import FarmerProfile
 
 User = get_user_model()
 
+# this signal will create a farmer profile automatically when a user with role 'farmer' is created
 @receiver(post_save, sender=User)
 def create_farmer_profile(sender, instance, created, **kwargs):
     if created and instance.role == 'farmer':

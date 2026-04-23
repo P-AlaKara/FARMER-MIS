@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FarmApp — Login</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="auth-wrapper">
+  <div class="auth-card">
+    <div class="logo">
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+        <rect width="32" height="32" rx="8" fill="#2d6a4f"/>
+        <path d="M8 24c0-6 4-10 8-12 4 2 8 6 8 12" stroke="#d8f3dc" stroke-width="2" fill="none"/>
+        <line x1="16" y1="12" x2="16" y2="24" stroke="#d8f3dc" stroke-width="2"/>
+      </svg>
+      <span>FarmApp</span>
+    </div>
+    <h2>Welcome back</h2>
+    <p class="sub">Sign in to your account</p>
+
+    <div class="alert alert-error" id="error-msg"></div>
+
+    <div class="form-group">
+      <label>Email address</label>
+      <input type="email" id="email" placeholder="you@example.com" autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+
+    <button class="btn btn-primary" id="login-btn" onclick="doLogin()">Sign in</button>
+
+    <p class="text-center mt-16" style="font-size:14px; color:#555;">
+      No account? <a class="link" href="register.html">Create one</a>
+    </p>
+  </div>
+</div>
+
+<script src="js/auth.js"></script>
+<script>
+  // Redirect if already logged in
+  if (isLoggedIn()) {
+    const user = getUser();
+    window.location.href = user?.role === 'admin' ? 'dashboard-admin.html' : 'dashboard-farmer.html';
+  }
+
+  async function doLogin() {
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const errEl = document.getElementById('error-msg');
+    const btn = document.getElementById('login-btn');
+
+    errEl.classList.remove('show');
+    if (!email || !password) {
+      errEl.textContent = 'Please fill in all fields.';
+      errEl.classList.add('show');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Signing in…';
+
+    const res = await fetch('http://127.0.0.1:8000/api/auth/login/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+
+    if (res.ok) {
+      saveTokens(data.access, data.refresh);
+      // Fetch user profile
+      const meRes = await fetch('http://127.0.0.1:8000/api/auth/me/', {
+        headers: { 'Authorization': `Bearer ${data.access}` }
+      });
+      const user = await meRes.json();
+      saveUser(user);
+      window.location.href = user.role === 'admin' ? 'dashboard-admin.html' : 'dashboard-farmer.html';
+    } else {
+      errEl.textContent = data.detail || 'Invalid credentials.';
+      errEl.classList.add('show');
+      btn.disabled = false;
+      btn.textContent = 'Sign in';
+    }
+  }
+
+  document.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+</script>
+</body>
+</html>

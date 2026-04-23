@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Farmer Dashboard — FarmApp</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+        <rect width="32" height="32" rx="8" fill="rgba(255,255,255,0.2)"/>
+        <path d="M8 24c0-6 4-10 8-12 4 2 8 6 8 12" stroke="#d8f3dc" stroke-width="2" fill="none"/>
+        <line x1="16" y1="12" x2="16" y2="24" stroke="#d8f3dc" stroke-width="2"/>
+      </svg>
+      <span>FarmApp</span>
+    </div>
+    <nav>
+      <a href="dashboard-farmer.html" class="active">🌱 My Dashboard</a>
+    </nav>
+    <div class="user-info">
+      <div class="name" id="sidebar-name">—</div>
+      <div class="role">Farmer</div>
+      <button onclick="logout()">Sign out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-header">
+      <h1 id="welcome-msg">Welcome!</h1>
+      <p>Here's your farming overview for today.</p>
+    </div>
+
+    <!-- Weather -->
+    <div id="weather-section"></div>
+
+    <!-- Insight -->
+    <div id="insight-section"></div>
+
+    <!-- Profile summary -->
+    <div class="card">
+      <h3>My Profile</h3>
+      <div id="profile-info" style="font-size:14px; color:#555; line-height:2;">Loading…</div>
+    </div>
+  </main>
+</div>
+
+<script src="js/auth.js"></script>
+<script>
+  requireAuth('farmer');
+  const user = getUser();
+  document.getElementById('sidebar-name').textContent = user?.full_name || user?.email || '—';
+
+  async function loadDashboard() {
+    const res = await authFetch('http://127.0.0.1:8000/api/farmers/dashboard/farmer/');
+    const data = await res.json();
+
+    document.getElementById('welcome-msg').textContent = data.welcome;
+
+    // Weather
+    const wSec = document.getElementById('weather-section');
+    if (data.weather) {
+      const w = data.weather;
+      wSec.innerHTML = `
+        <div class="weather-card">
+          <div class="city">📍 ${w.city}</div>
+          <div class="temp">${Math.round(w.temperature)}°C</div>
+          <div class="desc">${w.description}</div>
+          <div class="meta">
+            <span>💧 Humidity: ${w.humidity}%</span>
+            <span>💨 Wind: ${w.wind_speed} m/s</span>
+            <span>Feels like: ${Math.round(w.feels_like)}°C</span>
+          </div>
+        </div>`;
+    } else {
+      wSec.innerHTML = `<div class="insight-box" style="border-color:#ccc;color:#777;background:#f9f9f9">
+        Weather unavailable — set your city in your farmer profile to see live weather.
+      </div>`;
+    }
+
+    // Insight
+    if (data.insight) {
+      document.getElementById('insight-section').innerHTML =
+        `<div class="insight-box">💡 ${data.insight}</div>`;
+    }
+
+    // Profile
+    const meRes = await authFetch('http://127.0.0.1:8000/api/auth/me/');
+    const me = await meRes.json();
+    document.getElementById('profile-info').innerHTML = `
+      <div><strong>Name:</strong> ${me.full_name}</div>
+      <div><strong>Email:</strong> ${me.email}</div>
+      <div><strong>Member since:</strong> ${new Date(me.date_joined).toLocaleDateString()}</div>
+    `;
+  }
+
+  loadDashboard();
+</script>
+</body>
+</html>
