@@ -2,16 +2,29 @@ __pycache__/
 *.pyc
 *.pyd
 *.pyo
+*.pdb
 db.sqlite3
 *.sqlite3
+staticfiles/
+media/
 *.log
 .env
+.env.*
+!.env.example
 *.egg-info/
 dist/
 build/
 venv/
+env/
+.venv/
+.eggs/
 
 frontend/.DS_Store
+
+.vscode/
+.idea/
+*.swp
+*.swo
 
 # OS
 .DS_Store

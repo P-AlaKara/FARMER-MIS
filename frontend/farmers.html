@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Manage Farmers — FarmApp</title>
+  <title>Manage Farmers — Shamba</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -15,7 +15,7 @@
         <path d="M8 24c0-6 4-10 8-12 4 2 8 6 8 12" stroke="#d8f3dc" stroke-width="2" fill="none"/>
         <line x1="16" y1="12" x2="16" y2="24" stroke="#d8f3dc" stroke-width="2"/>
       </svg>
-      <span>FarmApp</span>
+      <span>Shamba</span>
     </div>
     <nav>
       <a href="dashboard-admin.html">📊 Dashboard</a>
@@ -59,7 +59,7 @@
   </main>
 </div>
 
-<!-- Add / Edit Modal -->
+<!-- Modal -->
 <div class="modal-overlay" id="modal">
   <div class="modal">
     <h3 id="modal-title">Add Farmer</h3>
@@ -115,6 +115,7 @@
   </div>
 </div>
 
+<script src="js/config.js"></script>
 <script src="js/auth.js"></script>
 <script>
   requireAuth('admin');
@@ -127,42 +128,51 @@
     const el = document.getElementById(type === 'ok' ? 'success-msg' : 'error-msg');
     el.textContent = text;
     el.classList.add('show');
-    setTimeout(() => el.classList.remove('show'), 3000);
+    setTimeout(() => el.classList.remove('show'), 3500);
   }
 
   async function loadFarmers() {
-    const res = await authFetch('http://127.0.0.1:8000/api/farmers/');
-    const data = await res.json();
-    const tbody = document.getElementById('farmers-tbody');
-    if (!data.length) {
-      tbody.innerHTML = '<tr><td colspan="7" class="empty">No farmers yet. Add one!</td></tr>';
-      return;
+    try {
+      const res  = await authFetch(`${API_BASE}/farmers/`);
+      const data = await res.json();
+      const tbody = document.getElementById('farmers-tbody');
+      if (!data.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty">No farmers yet. Add one!</td></tr>';
+        return;
+      }
+      tbody.innerHTML = data.map(f => `
+        <tr>
+          <td>${f.full_name}</td>
+          <td>${f.email}</td>
+          <td>${f.farmer_profile?.location || '—'}</td>
+          <td>${f.farmer_profile?.crop
+            ? '<span class="badge">' + f.farmer_profile.crop + '</span>'
+            : '—'}</td>
+          <td>${f.farmer_profile?.farm_size_acres
+            ? f.farmer_profile.farm_size_acres + ' ac'
+            : '—'}</td>
+          <td>${f.farmer_profile?.phone || '—'}</td>
+          <td>
+            <div class="actions">
+              <button class="btn btn-sm btn-edit"   onclick="openEdit(${f.id})">Edit</button>
+              <button class="btn btn-sm btn-delete" onclick="deleteFarmer(${f.id}, '${f.full_name}')">Delete</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    } catch (_) {
+      document.getElementById('farmers-tbody').innerHTML =
+        '<tr><td colspan="7" class="empty">Failed to load farmers.</td></tr>';
     }
-    tbody.innerHTML = data.map(f => `
-      <tr>
-        <td>${f.full_name}</td>
-        <td>${f.email}</td>
-        <td>${f.farmer_profile?.location || '—'}</td>
-        <td>${f.farmer_profile?.crop ? '<span class="badge">' + f.farmer_profile.crop + '</span>' : '—'}</td>
-        <td>${f.farmer_profile?.farm_size_acres ? f.farmer_profile.farm_size_acres + ' ac' : '—'}</td>
-        <td>${f.farmer_profile?.phone || '—'}</td>
-        <td>
-          <div class="actions">
-            <button class="btn btn-sm btn-edit" onclick="openEdit(${f.id})">Edit</button>
-            <button class="btn btn-sm btn-delete" onclick="deleteFarmer(${f.id}, '${f.full_name}')">Delete</button>
-          </div>
-        </td>
-      </tr>
-    `).join('');
   }
 
-  function openModal(id) {
+  function openModal() {
     editingId = null;
     document.getElementById('modal-title').textContent = 'Add Farmer';
     document.getElementById('modal-error').classList.remove('show');
     document.getElementById('pw-group').style.display = '';
     ['f-first','f-last','f-email','f-password','f-location','f-city','f-crop','f-size','f-phone']
-      .forEach(id => document.getElementById(id).value = '');
+      .forEach(id => { document.getElementById(id).value = ''; });
     document.getElementById('modal').classList.add('open');
   }
 
@@ -170,11 +180,11 @@
     editingId = id;
     document.getElementById('modal-title').textContent = 'Edit Farmer';
     document.getElementById('modal-error').classList.remove('show');
-    document.getElementById('pw-group').style.display = 'none'; // password optional on edit
+    document.getElementById('pw-group').style.display = 'none';
     document.getElementById('modal').classList.add('open');
 
-    const res = await authFetch(`http://127.0.0.1:8000/api/farmers/${id}/`);
-    const f = await res.json();
+    const res = await authFetch(`${API_BASE}/farmers/${id}/`);
+    const f   = await res.json();
     document.getElementById('f-first').value    = f.first_name || '';
     document.getElementById('f-last').value     = f.last_name  || '';
     document.getElementById('f-email').value    = f.email      || '';
@@ -202,12 +212,10 @@
         phone:           document.getElementById('f-phone').value.trim(),
       }
     };
-    if (!editingId) {
-      payload.password = document.getElementById('f-password').value;
-    }
+    if (!editingId) payload.password = document.getElementById('f-password').value;
 
     const errEl = document.getElementById('modal-error');
-    const btn = document.getElementById('save-btn');
+    const btn   = document.getElementById('save-btn');
 
     if (!payload.first_name || !payload.last_name || !payload.email) {
       errEl.textContent = 'First name, last name and email are required.';
@@ -215,34 +223,41 @@
       return;
     }
 
-    btn.disabled = true;
+    btn.disabled    = true;
     btn.textContent = 'Saving…';
 
-    const url = editingId
-      ? `http://127.0.0.1:8000/api/farmers/${editingId}/`
-      : 'http://127.0.0.1:8000/api/farmers/';
+    const url    = editingId ? `${API_BASE}/farmers/${editingId}/` : `${API_BASE}/farmers/`;
     const method = editingId ? 'PATCH' : 'POST';
 
-    const res = await authFetch(url, { method, body: JSON.stringify(payload) });
-    const data = await res.json();
+    try {
+      const res  = await authFetch(url, { method, body: JSON.stringify(payload) });
+      const data = await res.json();
 
-    btn.disabled = false;
-    btn.textContent = 'Save';
+      btn.disabled    = false;
+      btn.textContent = 'Save';
 
-    if (res.ok) {
-      closeModal();
-      showMsg('ok', editingId ? 'Farmer updated successfully.' : 'Farmer added successfully.');
-      loadFarmers();
-    } else {
-      const msgs = Object.entries(data).map(([k,v]) => `${k}: ${[v].flat().join(', ')}`).join(' | ');
-      errEl.textContent = msgs || 'Something went wrong.';
+      if (res.ok) {
+        closeModal();
+        showMsg('ok', editingId ? 'Farmer updated.' : 'Farmer added.');
+        loadFarmers();
+      } else {
+        const msgs = Object.entries(data)
+          .map(([k, v]) => `${k}: ${[v].flat().join(', ')}`)
+          .join(' | ');
+        errEl.textContent = msgs || 'Something went wrong.';
+        errEl.classList.add('show');
+      }
+    } catch (_) {
+      btn.disabled    = false;
+      btn.textContent = 'Save';
+      errEl.textContent = 'Network error. Please try again.';
       errEl.classList.add('show');
     }
   }
 
   async function deleteFarmer(id, name) {
-    if (!confirm(`Delete farmer "${name}"? This cannot be undone.`)) return;
-    const res = await authFetch(`http://127.0.0.1:8000/api/farmers/${id}/`, { method: 'DELETE' });
+    if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+    const res = await authFetch(`${API_BASE}/farmers/${id}/`, { method: 'DELETE' });
     if (res.ok) {
       showMsg('ok', `${name} has been removed.`);
       loadFarmers();
@@ -251,7 +266,6 @@
     }
   }
 
-  // Close modal on overlay click
   document.getElementById('modal').addEventListener('click', function(e) {
     if (e.target === this) closeModal();
   });

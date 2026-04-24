@@ -76,8 +76,8 @@ def get_farming_insight(weather: dict, crop: str) -> str:
         insights.append(f'Temperature ({temp}°C) is in the optimal range for your crop. Good growing conditions today.')
 
     if humidity > 80:
-        insights.append('High humidity detected — watch for fungal diseases. Ensure good airflow around plants.')
+        insights.append('High humidity detected, watch for fungal diseases. Ensure good airflow around plants.')
     elif humidity < 30:
-        insights.append('Low humidity — increase irrigation and consider mulching to retain soil moisture.')
+        insights.append('Low humidity, increase irrigation and consider mulching to retain soil moisture.')
 
     return ' '.join(insights)

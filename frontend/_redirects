@@ -1,0 +1,6 @@
+# Netlify redirect rules
+# Ensures direct URL access works for all HTML pages
+/dashboard-admin   /dashboard-admin.html  200
+/dashboard-farmer  /dashboard-farmer.html 200
+/farmers           /farmers.html          200
+/register          /register.html         200

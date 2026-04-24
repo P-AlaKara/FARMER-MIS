@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard — Shamba</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+        <rect width="32" height="32" rx="8" fill="rgba(255,255,255,0.2)"/>
+        <path d="M8 24c0-6 4-10 8-12 4 2 8 6 8 12" stroke="#d8f3dc" stroke-width="2" fill="none"/>
+        <line x1="16" y1="12" x2="16" y2="24" stroke="#d8f3dc" stroke-width="2"/>
+      </svg>
+      <span>Shamba</span>
+    </div>
+    <nav>
+      <a href="dashboard-admin.html" class="active">📊 Dashboard</a>
+      <a href="farmers.html">👨‍🌾 Farmers</a>
+    </nav>
+    <div class="user-info">
+      <div class="name" id="sidebar-name">—</div>
+      <div class="role">Admin</div>
+      <button onclick="logout()">Sign out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-header">
+      <h1>Admin Dashboard</h1>
+      <p id="greeting">Welcome back</p>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="value" id="total-farmers">—</div>
+        <div class="label">Registered farmers</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="top-bar">
+        <h3 style="border:none;padding:0;margin:0">All Farmers</h3>
+        <a href="farmers.html" class="btn btn-outline btn-sm">Manage farmers</a>
+      </div>
+      <div class="table-wrap" style="margin-top:16px">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th><th>Email</th><th>Location</th><th>Crop</th><th>Joined</th>
+            </tr>
+          </thead>
+          <tbody id="farmers-tbody">
+            <tr><td colspan="5" class="empty">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script>
+  requireAuth('admin');
+  const user = getUser();
+  document.getElementById('sidebar-name').textContent = user?.full_name || user?.email || '—';
+  document.getElementById('greeting').textContent = `Welcome back, ${user?.first_name || 'Admin'}`;
+
+  async function loadDashboard() {
+    try {
+      const res  = await authFetch(`${API_BASE}/farmers/dashboard/admin/`);
+      const data = await res.json();
+      document.getElementById('total-farmers').textContent = data.total_farmers;
+      const tbody = document.getElementById('farmers-tbody');
+      if (!data.farmers.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty">No farmers yet.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = data.farmers.map(f => `
+        <tr>
+          <td>${f.full_name}</td>
+          <td>${f.email}</td>
+          <td>${f.farmer_profile?.location || '—'}</td>
+          <td>${f.farmer_profile?.crop
+            ? '<span class="badge">' + f.farmer_profile.crop + '</span>'
+            : '—'}</td>
+          <td>${new Date(f.date_joined).toLocaleDateString()}</td>
+        </tr>
+      `).join('');
+    } catch (_) {
+      document.getElementById('farmers-tbody').innerHTML =
+        '<tr><td colspan="5" class="empty">Failed to load data.</td></tr>';
+    }
+  }
+
+  loadDashboard();
+</script>
+</body>
+</html>

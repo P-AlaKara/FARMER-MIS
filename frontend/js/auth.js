@@ -1,11 +1,11 @@
-const API_BASE = 'http://127.0.0.1:8000/api';
+// Depends on: js/config.js (must be loaded first in HTML)
 
 function saveTokens(access, refresh) {
     localStorage.setItem('access_token', access);
     localStorage.setItem('refresh_token', refresh);
 }
 
-function getAccess() { return localStorage.getItem('access_token'); }
+function getAccess()  { return localStorage.getItem('access_token'); }
 function getRefresh() { return localStorage.getItem('refresh_token'); }
 
 function clearTokens() {
@@ -42,16 +42,18 @@ function requireAuth(role) {
 async function refreshAccessToken() {
     const refresh = getRefresh();
     if (!refresh) return false;
-    const res = await fetch(`${API_BASE}/auth/refresh/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh }),
-    });
-    if (res.ok) {
-        const data = await res.json();
-        localStorage.setItem('access_token', data.access);
-        return true;
-    }
+    try {
+        const res = await fetch(`${API_BASE}/auth/refresh/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refresh }),
+        });
+        if (res.ok) {
+            const data = await res.json();
+            localStorage.setItem('access_token', data.access);
+            return true;
+        }
+    } catch (_) {}
     return false;
 }
 
