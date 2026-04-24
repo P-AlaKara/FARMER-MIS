@@ -2,33 +2,38 @@
 
 A full-stack web application for managing farmers, built with Django REST Framework and HTML/CSS/JS.
 
+# Project Overview
+
 ## Tech Stack
 
-|------------|-------------------------------------|
-| Backend    | Django 4.2 + Django REST Framework  |
-| Frontend   | HTML, CSS, JavaScript         |
-| Database   | SQLite (development), PostgreSQL (production) |
-| Auth       | JWT |
-| Weather API| OpenWeatherMap |
-| Backend hosting | Render         |
-| Frontend hosting | Netlify          |
+| Component | Technology |
+| :--- | :--- |
+| **Backend** | Django 4.2 + Django REST Framework |
+| **Frontend** | HTML, CSS, JavaScript |
+| **Database** | SQLite (development), PostgreSQL (production) |
+| **Auth** | JWT (JSON Web Tokens) |
+| **Weather API** | OpenWeatherMap |
+| **Backend hosting** | Render |
+| **Frontend hosting** | Netlify |
+
+<br>
 
 ## Backend API Reference
 
-|------------|---------|-------------------------------------------------|
-| Method | Endpoint| AuthDescription |
-| POST| /api/auth/register/ | None| Register user |
-| POST| /api/auth/login/| None| Login → returns JWT |
-| POST | /api/auth/refresh/| None| Refresh access token |
-| POST| /api/auth/logout/| JWT| Blacklist refresh token |
-| GET| /api/auth/me/| JWT| Current user info |
-| GET| /api/farmers/dashboard/admin/ | Admin JWT| Admin dashboard |
-| GET | /api/farmers/dashboard/farmer/ | Farmer JWT | Farmer dashboard + weather |
-| GET | /api/farmers/ | Admin JWT | List all farmers |
-| POST | /api/farmers/ | Admin JWT | Add a farmer |
-| GET | /api/farmers/<id>/ | Admin JWT | Get farmer detail |
-| PUT/PATCH | /api/farmers/<id>/ | Admin JWT | Edit a farmer |
-| DELETE | /api/farmers/<id>/ | Admin JWT | Delete a farmer |
+| Method | Endpoint | Auth | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/auth/register/` | None | Register user |
+| `POST` | `/api/auth/login/` | None | Login $\rightarrow$ returns JWT |
+| `POST` | `/api/auth/refresh/` | None | Refresh access token |
+| `POST` | `/api/auth/logout/` | JWT | Blacklist refresh token |
+| `GET` | `/api/auth/me/` | JWT | Current user info |
+| `GET` | `/api/farmers/dashboard/admin/` | Admin JWT | Admin dashboard |
+| `GET` | `/api/farmers/dashboard/farmer/` | Farmer JWT | Farmer dashboard + weather |
+| `GET` | `/api/farmers/` | Admin JWT | List all farmers |
+| `POST` | `/api/farmers/` | Admin JWT | Add a farmer |
+| `GET` | `/api/farmers/{id}/` | Admin JWT | Get farmer detail |
+| `PUT/PATCH` | `/api/farmers/{id}/` | Admin JWT | Edit a farmer |
+| `DELETE` | `/api/farmers/{id}/` | Admin JWT | Delete a farmer |
 
 ## Authentication Method
 
