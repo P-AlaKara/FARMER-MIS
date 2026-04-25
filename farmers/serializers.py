@@ -7,10 +7,13 @@ User = get_user_model()
 
 
 class FarmerProfileSerializer(serializers.ModelSerializer):
-    # Mark fields required at serializer level
-    city  = serializers.CharField(required=True)
-    crop  = serializers.CharField(required=True)
-    phone = serializers.CharField(required=True)
+    city           = serializers.CharField(max_length=100)
+    crop           = serializers.CharField(max_length=100)
+    phone          = serializers.CharField(max_length=20)
+    location       = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    farm_size_acres = serializers.DecimalField(
+        max_digits=8, decimal_places=2, required=False, allow_null=True
+    )
 
     class Meta:
         model  = FarmerProfile
@@ -37,31 +40,19 @@ class FarmerSerializer(serializers.ModelSerializer):
     def get_full_name(self, obj):
         return obj.get_full_name()
 
-    def validate_password(self, value):
-        # Password is required on create, optional on update
-        if not self.instance and not value:
-            raise serializers.ValidationError('Password is required when creating a farmer.')
-        return value
+    def validate(self, attrs):
+        # Password is required only on create (no instance yet)
+        if not self.instance and not attrs.get('password'):
+            raise serializers.ValidationError({'password': 'Password is required.'})
+        return attrs
 
     @transaction.atomic
     def create(self, validated_data):
-        """
-        Wrapped in transaction.atomic so that if FarmerProfile creation
-        fails for any reason, the User creation is also rolled back.
-        This prevents the 'email already exists on retry' bug.
-        """
-        profile_data = validated_data.pop('farmer_profile', {})
+        profile_data = validated_data.pop('farmer_profile')
         password     = validated_data.pop('password')
         validated_data['role'] = 'farmer'
-
         user = User.objects.create_user(password=password, **validated_data)
-
-        # Signal also fires here — get_or_create avoids a duplicate
-        profile, _ = FarmerProfile.objects.get_or_create(user=user)
-        for attr, value in profile_data.items():
-            setattr(profile, attr, value)
-        profile.save()
-
+        FarmerProfile.objects.update_or_create(user=user, defaults=profile_data)
         return user
 
     @transaction.atomic

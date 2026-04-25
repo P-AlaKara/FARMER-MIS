@@ -5,6 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Manage Farmers — Shamba</title>
   <link rel="stylesheet" href="css/style.css">
+  <style>
+    .required-star { color: #e63946; margin-left: 2px; }
+
+    .pw-wrap { position: relative; }
+    .pw-wrap input { padding-right: 42px; }
+    .pw-toggle {
+      position: absolute; right: 12px; top: 50%;
+      transform: translateY(-50%);
+      background: none; border: none; cursor: pointer;
+      color: #888; padding: 0; display: flex; align-items: center;
+    }
+    .pw-toggle:hover { color: #333; }
+  </style>
 </head>
 <body>
 <div class="app-layout">
@@ -65,48 +78,74 @@
     <h3 id="modal-title">Add Farmer</h3>
     <div class="alert alert-error" id="modal-error"></div>
 
+    <!-- Name row -->
     <div class="form-row">
       <div class="form-group">
-        <label>First name</label>
+        <label>First name <span class="required-star">*</span></label>
         <input type="text" id="f-first" placeholder="John">
       </div>
       <div class="form-group">
-        <label>Last name</label>
+        <label>Last name <span class="required-star">*</span></label>
         <input type="text" id="f-last" placeholder="Doe">
       </div>
     </div>
+
+    <!-- Email -->
     <div class="form-group">
-      <label>Email</label>
+      <label>Email <span class="required-star">*</span></label>
       <input type="email" id="f-email" placeholder="farmer@example.com">
     </div>
+
+    <!-- Password (hidden on edit) -->
     <div class="form-group" id="pw-group">
-      <label>Password</label>
-      <input type="password" id="f-password" placeholder="Min. 8 characters">
+      <label>Password <span class="required-star">*</span></label>
+      <div class="pw-wrap">
+        <input type="password" id="f-password" placeholder="Min. 8 characters">
+        <button type="button" class="pw-toggle" onclick="togglePw('f-password', this)"
+                aria-label="Show/hide password">
+          <svg id="f-password-icon" width="18" height="18" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+      </div>
     </div>
+
+    <!-- Location + City -->
     <div class="form-row">
       <div class="form-group">
-        <label>Location</label>
+        <label>Location / Region</label>
         <input type="text" id="f-location" placeholder="Rift Valley">
       </div>
       <div class="form-group">
-        <label>City (for weather)</label>
+        <label>City <span class="required-star">*</span></label>
         <input type="text" id="f-city" placeholder="Nakuru">
       </div>
     </div>
+
+    <!-- Crop + Farm size -->
     <div class="form-row">
       <div class="form-group">
-        <label>Crop</label>
+        <label>Crop <span class="required-star">*</span></label>
         <input type="text" id="f-crop" placeholder="maize">
       </div>
       <div class="form-group">
         <label>Farm size (acres)</label>
-        <input type="number" id="f-size" placeholder="5.0" step="0.1">
+        <input type="number" id="f-size" placeholder="5.0" step="0.1" min="0">
       </div>
     </div>
+
+    <!-- Phone -->
     <div class="form-group">
-      <label>Phone</label>
+      <label>Phone <span class="required-star">*</span></label>
       <input type="text" id="f-phone" placeholder="0712345678">
     </div>
+
+    <p style="font-size:12px;color:#888;margin-top:4px;">
+      <span class="required-star">*</span> Required fields
+    </p>
 
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
@@ -124,13 +163,32 @@
 
   let editingId = null;
 
+  // ── Eye icon SVGs ──────────────────────────────────────────
+  const EYE_OPEN = `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+    <circle cx="12" cy="12" r="3"/>`;
+  const EYE_CLOSED = `<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8
+    a18.45 18.45 0 0 1 5.06-5.94"/>
+    <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+    <line x1="1" y1="1" x2="23" y2="23"/>`;
+
+  function togglePw(inputId, btn) {
+    const input = document.getElementById(inputId);
+    const icon  = document.getElementById(inputId + '-icon');
+    const showing = input.type === 'text';
+    input.type   = showing ? 'password' : 'text';
+    icon.innerHTML = showing ? EYE_OPEN : EYE_CLOSED;
+    btn.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+  }
+
+  // ── Feedback ───────────────────────────────────────────────
   function showMsg(type, text) {
     const el = document.getElementById(type === 'ok' ? 'success-msg' : 'error-msg');
     el.textContent = text;
     el.classList.add('show');
-    setTimeout(() => el.classList.remove('show'), 3500);
+    setTimeout(() => el.classList.remove('show'), 4000);
   }
 
+  // ── Load table ─────────────────────────────────────────────
   async function loadFarmers() {
     try {
       const res  = await authFetch(`${API_BASE}/farmers/`);
@@ -149,13 +207,14 @@
             ? '<span class="badge">' + f.farmer_profile.crop + '</span>'
             : '—'}</td>
           <td>${f.farmer_profile?.farm_size_acres
-            ? f.farmer_profile.farm_size_acres + ' ac'
-            : '—'}</td>
+            ? f.farmer_profile.farm_size_acres + ' ac' : '—'}</td>
           <td>${f.farmer_profile?.phone || '—'}</td>
           <td>
             <div class="actions">
-              <button class="btn btn-sm btn-edit"   onclick="openEdit(${f.id})">Edit</button>
-              <button class="btn btn-sm btn-delete" onclick="deleteFarmer(${f.id}, '${f.full_name}')">Delete</button>
+              <button class="btn btn-sm btn-edit"
+                      onclick="openEdit(${f.id})">Edit</button>
+              <button class="btn btn-sm btn-delete"
+                      onclick="deleteFarmer(${f.id}, '${f.full_name}')">Delete</button>
             </div>
           </td>
         </tr>
@@ -166,16 +225,28 @@
     }
   }
 
+  // ── Open Add modal ─────────────────────────────────────────
   function openModal() {
     editingId = null;
     document.getElementById('modal-title').textContent = 'Add Farmer';
     document.getElementById('modal-error').classList.remove('show');
     document.getElementById('pw-group').style.display = '';
-    ['f-first','f-last','f-email','f-password','f-location','f-city','f-crop','f-size','f-phone']
+
+    // Reset all fields
+    ['f-first','f-last','f-email','f-password',
+     'f-location','f-city','f-crop','f-size','f-phone']
       .forEach(id => { document.getElementById(id).value = ''; });
+
+    // Reset password field to hidden
+    const pw = document.getElementById('f-password');
+    pw.type = 'password';
+    document.getElementById('f-password-icon').innerHTML = EYE_OPEN;
+
     document.getElementById('modal').classList.add('open');
+    document.getElementById('f-first').focus();
   }
 
+  // ── Open Edit modal ────────────────────────────────────────
   async function openEdit(id) {
     editingId = id;
     document.getElementById('modal-title').textContent = 'Edit Farmer';
@@ -183,23 +254,74 @@
     document.getElementById('pw-group').style.display = 'none';
     document.getElementById('modal').classList.add('open');
 
-    const res = await authFetch(`${API_BASE}/farmers/${id}/`);
-    const f   = await res.json();
-    document.getElementById('f-first').value    = f.first_name || '';
-    document.getElementById('f-last').value     = f.last_name  || '';
-    document.getElementById('f-email').value    = f.email      || '';
-    document.getElementById('f-location').value = f.farmer_profile?.location || '';
-    document.getElementById('f-city').value     = f.farmer_profile?.city     || '';
-    document.getElementById('f-crop').value     = f.farmer_profile?.crop     || '';
-    document.getElementById('f-size').value     = f.farmer_profile?.farm_size_acres || '';
-    document.getElementById('f-phone').value    = f.farmer_profile?.phone    || '';
+    try {
+      const res = await authFetch(`${API_BASE}/farmers/${id}/`);
+      const f   = await res.json();
+      document.getElementById('f-first').value    = f.first_name                        || '';
+      document.getElementById('f-last').value     = f.last_name                         || '';
+      document.getElementById('f-email').value    = f.email                             || '';
+      document.getElementById('f-location').value = f.farmer_profile?.location          || '';
+      document.getElementById('f-city').value     = f.farmer_profile?.city              || '';
+      document.getElementById('f-crop').value     = f.farmer_profile?.crop              || '';
+      document.getElementById('f-size').value     = f.farmer_profile?.farm_size_acres   || '';
+      document.getElementById('f-phone').value    = f.farmer_profile?.phone             || '';
+    } catch (_) {
+      document.getElementById('modal-error').textContent = 'Failed to load farmer details.';
+      document.getElementById('modal-error').classList.add('show');
+    }
   }
 
   function closeModal() {
     document.getElementById('modal').classList.remove('open');
   }
 
+  // ── Validate ───────────────────────────────────────────────
+  function validateForm(isNew) {
+    const required = [
+      { id: 'f-first', label: 'First name' },
+      { id: 'f-last',  label: 'Last name'  },
+      { id: 'f-email', label: 'Email'      },
+      { id: 'f-city',  label: 'City'       },
+      { id: 'f-crop',  label: 'Crop'       },
+      { id: 'f-phone', label: 'Phone'      },
+    ];
+    if (isNew) required.push({ id: 'f-password', label: 'Password' });
+
+    const missing = required
+      .filter(f => !document.getElementById(f.id).value.trim())
+      .map(f => f.label);
+
+    if (missing.length) {
+      return `Please fill in: ${missing.join(', ')}.`;
+    }
+
+    const email = document.getElementById('f-email').value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return 'Please enter a valid email address.';
+    }
+
+    if (isNew && document.getElementById('f-password').value.length < 8) {
+      return 'Password must be at least 8 characters.';
+    }
+
+    return null; // valid
+  }
+
+  // ── Save (create or update) ────────────────────────────────
   async function saveFarmer() {
+    const isNew  = !editingId;
+    const errEl  = document.getElementById('modal-error');
+    const btn    = document.getElementById('save-btn');
+
+    errEl.classList.remove('show');
+
+    const validationError = validateForm(isNew);
+    if (validationError) {
+      errEl.textContent = validationError;
+      errEl.classList.add('show');
+      return;
+    }
+
     const payload = {
       first_name: document.getElementById('f-first').value.trim(),
       last_name:  document.getElementById('f-last').value.trim(),
@@ -210,62 +332,73 @@
         crop:            document.getElementById('f-crop').value.trim(),
         farm_size_acres: document.getElementById('f-size').value || null,
         phone:           document.getElementById('f-phone').value.trim(),
-      }
+      },
     };
-    if (!editingId) payload.password = document.getElementById('f-password').value;
-
-    const errEl = document.getElementById('modal-error');
-    const btn   = document.getElementById('save-btn');
-
-    if (!payload.first_name || !payload.last_name || !payload.email) {
-      errEl.textContent = 'First name, last name and email are required.';
-      errEl.classList.add('show');
-      return;
-    }
+    if (isNew) payload.password = document.getElementById('f-password').value;
 
     btn.disabled    = true;
     btn.textContent = 'Saving…';
 
-    const url    = editingId ? `${API_BASE}/farmers/${editingId}/` : `${API_BASE}/farmers/`;
-    const method = editingId ? 'PATCH' : 'POST';
-
     try {
+      const url    = isNew
+        ? `${API_BASE}/farmers/`
+        : `${API_BASE}/farmers/${editingId}/`;
+      const method = isNew ? 'POST' : 'PATCH';
+
       const res  = await authFetch(url, { method, body: JSON.stringify(payload) });
-      const data = await res.json();
 
-      btn.disabled    = false;
-      btn.textContent = 'Save';
-
+      // 201 Created or 200 OK → success, 204 No Content won't have a body
       if (res.ok) {
         closeModal();
-        showMsg('ok', editingId ? 'Farmer updated.' : 'Farmer added.');
+        showMsg('ok', isNew ? 'Farmer added successfully.' : 'Farmer updated successfully.');
         loadFarmers();
       } else {
-        const msgs = Object.entries(data)
-          .map(([k, v]) => `${k}: ${[v].flat().join(', ')}`)
-          .join(' | ');
-        errEl.textContent = msgs || 'Something went wrong.';
+        // Parse error body
+        let errMsg = 'Something went wrong. Please try again.';
+        try {
+          const data = await res.json();
+          // Flatten DRF error dict: { email: ['...'], farmer_profile: { city: ['...'] } }
+          const lines = [];
+          for (const [key, val] of Object.entries(data)) {
+            if (typeof val === 'object' && !Array.isArray(val)) {
+              for (const [k2, v2] of Object.entries(val)) {
+                lines.push(`${k2}: ${[v2].flat().join(', ')}`);
+              }
+            } else {
+              lines.push(`${key}: ${[val].flat().join(', ')}`);
+            }
+          }
+          if (lines.length) errMsg = lines.join(' | ');
+        } catch (_) {}
+        errEl.textContent = errMsg;
         errEl.classList.add('show');
       }
     } catch (_) {
+      errEl.textContent = 'Network error — check your connection and try again.';
+      errEl.classList.add('show');
+    } finally {
       btn.disabled    = false;
       btn.textContent = 'Save';
-      errEl.textContent = 'Network error. Please try again.';
-      errEl.classList.add('show');
     }
   }
 
+  // ── Delete ─────────────────────────────────────────────────
   async function deleteFarmer(id, name) {
     if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
-    const res = await authFetch(`${API_BASE}/farmers/${id}/`, { method: 'DELETE' });
-    if (res.ok) {
-      showMsg('ok', `${name} has been removed.`);
-      loadFarmers();
-    } else {
-      showMsg('err', 'Failed to delete farmer.');
+    try {
+      const res = await authFetch(`${API_BASE}/farmers/${id}/`, { method: 'DELETE' });
+      if (res.ok) {
+        showMsg('ok', `${name} has been removed.`);
+        loadFarmers();
+      } else {
+        showMsg('err', 'Failed to delete farmer. Please try again.');
+      }
+    } catch (_) {
+      showMsg('err', 'Network error. Please try again.');
     }
   }
 
+  // Close modal when clicking outside it
   document.getElementById('modal').addEventListener('click', function(e) {
     if (e.target === this) closeModal();
   });
