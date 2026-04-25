@@ -1,6 +1,17 @@
 # ShambaApp: A Farmer Management Information System
 
-A full-stack web application for managing farmers, built with Django REST Framework and HTML/CSS/JS.
+A simple web application for managing farmers, built with Django REST Framework and HTML/CSS/JS.
+## Test Credentials
+
+You can use the following pre-made accounts to explore the app without registering:
+
+| Role   | Email                  | Password        |
+|--------|------------------------|-----------------|
+| Farmer | farmer@example.com     | TestFarmer@2025 |
+| Admin  | admin@example.com      | Admin@2026      |
+
+## ⚠️ Performance Disclaimer
+The backend is hosted on Render's **free tier** where instances spin down after 15 minutes of inactivity, so **the first request after a period of no use may take 30–60 seconds** to respond. 
 
 # Project Overview
 
